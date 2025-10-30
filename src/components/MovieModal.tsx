@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { X, Star, Calendar, Globe, User, Film, Play, Tv, ExternalLink, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Movie } from '@/app/page'
 import { getEnhancedRecommendations } from '@/utils/recommendations'
@@ -27,6 +27,12 @@ export default function MovieModal({ movie, onClose, allMovies, onMovieSelect }:
     setCurrentMovieIndex(index)
   }, [movie, allMovies])
 
+  const navigateToMovie = (movie: Movie) => {
+    if (onMovieSelect) {
+      onMovieSelect(movie);
+    }
+  };
+
   useEffect(() => {
     // Generate recommendations when modal opens
     const recs = getEnhancedRecommendations(movie, allMovies, 12) // Show more recommendations
@@ -48,7 +54,7 @@ export default function MovieModal({ movie, onClose, allMovies, onMovieSelect }:
         }
       }
     }
-  }, [movie, allMovies, navigateToMovie])
+  }, [movie, allMovies, onMovieSelect])
 
   useEffect(() => {
     // Prevent body scroll when modal is open
@@ -101,31 +107,67 @@ export default function MovieModal({ movie, onClose, allMovies, onMovieSelect }:
     }
   }
 
-  const navigateToPrevious = () => {
+  const navigateToPrevious = useCallback(() => {
     if (currentMovieIndex > 0) {
       const prevMovie = allMovies[currentMovieIndex - 1]
       if (prevMovie && onMovieSelect) {
         setIsLoading(true)
-        setTimeout(() => {
-          onMovieSelect(prevMovie)
-          setIsLoading(false)
-        }, 150)
+        onMovieSelect(prevMovie)
+        // No need for setTimeout as we want immediate feedback
+        setIsLoading(false)
       }
     }
-  }
+  }, [currentMovieIndex, allMovies, onMovieSelect])
 
-  const navigateToNext = () => {
+  const navigateToNext = useCallback(() => {
     if (currentMovieIndex < allMovies.length - 1) {
       const nextMovie = allMovies[currentMovieIndex + 1]
       if (nextMovie && onMovieSelect) {
         setIsLoading(true)
-        setTimeout(() => {
-          onMovieSelect(nextMovie)
-          setIsLoading(false)
-        }, 150)
+        onMovieSelect(nextMovie)
+        // No need for setTimeout as we want immediate feedback
+        setIsLoading(false)
       }
     }
-  }
+  }, [currentMovieIndex, allMovies.length, onMovieSelect])
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle if modal is open
+      if (!document.body.classList.contains('modal-open')) return
+
+      switch (e.key) {
+        case 'Escape':
+          handleClose()
+          break
+        case 'ArrowLeft':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            navigateToPrevious()
+          }
+          break
+        case 'ArrowRight':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            navigateToNext()
+          }
+          break
+        case 'Backspace':
+          if (canGoBack) {
+            e.preventDefault()
+            navigateBack()
+          }
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [navigateToPrevious, navigateToNext, canGoBack, navigateBack, handleClose])
 
   return (
     <div 

@@ -144,16 +144,34 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
 
   const navigateBack = useCallback(() => {
     if (history.length > 0) {
+      // Get the previous state from history
       const previousState = history[history.length - 1].state
-      setHistory(prev => prev.slice(0, -1))
+      
+      // Update the history by removing the current state
+      setHistory(prev => {
+        const newHistory = [...prev]
+        newHistory.pop()
+        return newHistory
+      })
+      
+      // Update the current state with the previous state
       setCurrentState(previousState)
       
       // Restore scroll position after a brief delay
       setTimeout(() => {
-        window.scrollTo({ top: previousState.scrollPosition, behavior: 'smooth' })
+        window.scrollTo({ 
+          top: previousState.scrollPosition || 0, 
+          behavior: 'smooth' 
+        })
       }, 100)
+      
+      return true
     }
+    return false
   }, [history])
+
+  // Calculate canGoBack based on history length
+  const canGoBack = history.length > 0
 
   const updateBreadcrumbs = useCallback((breadcrumbs: BreadcrumbItem[]) => {
     setCurrentState(prev => ({ ...prev, breadcrumbs }))
@@ -167,8 +185,6 @@ export function NavigationProvider({ children }: NavigationProviderProps) {
     setHistory([])
     setCurrentState(initialState)
   }, [])
-
-  const canGoBack = history.length > 0
 
   const contextValue: NavigationContextType = {
     currentState,
